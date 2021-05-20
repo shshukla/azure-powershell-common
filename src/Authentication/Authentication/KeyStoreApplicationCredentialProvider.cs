@@ -12,8 +12,11 @@
 // limitations under the License.
 // ----------------------------------------------------------------------------------
 
+using Microsoft.Azure.Commands.Common.Authentication.Utilities;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Microsoft.Rest.Azure.Authentication;
+using System;
+using System.Runtime.InteropServices;
 #if NETSTANDARD
 using Microsoft.WindowsAzure.Commands.Common;
 #endif
@@ -66,11 +69,25 @@ namespace Microsoft.Azure.Commands.Common.Authentication
             task.Start();
             var key = await task.ConfigureAwait(false);
 #if !NETSTANDARD
-            return await context.AcquireTokenAsync(audience, new ClientCredential(clientId, key));
+            return await context.AcquireTokenAsync(audience, new ClientCredential(clientId, SecureStringToString(key)));
 #else
             return await context.AcquireTokenAsync(audience, new ClientCredential(clientId,
                 ConversionUtilities.SecureStringToString(key)));
 #endif
+        }
+
+        private static string SecureStringToString(SecureString secureString)
+        {
+            IntPtr valuePtr = IntPtr.Zero;
+            try
+            {
+                valuePtr = Marshal.SecureStringToGlobalAllocUnicode(secureString);
+                return Marshal.PtrToStringUni(valuePtr);
+            }
+            finally
+            {
+                Marshal.ZeroFreeGlobalAllocUnicode(valuePtr);
+            }
         }
     }
 }

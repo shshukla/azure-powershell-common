@@ -215,19 +215,21 @@ namespace Microsoft.Azure.Commands.Common.Authentication
 
         public class AdalSession : AzureSession
         {
+            private TraceLevel traceLevel;
+            private SourceLevels sourceLevels;
 #if !NETSTANDARD
             public override TraceLevel AuthenticationLegacyTraceLevel
             {
-                get { return AdalTrace.LegacyTraceSwitch.Level; }
-                set { AdalTrace.LegacyTraceSwitch.Level = value; }
+                get { return this.traceLevel; }
+                set { this.traceLevel = value; }
             }
 
-            public override TraceListenerCollection AuthenticationTraceListeners => AdalTrace.TraceSource.Listeners;
+            public override TraceListenerCollection AuthenticationTraceListeners => Trace.Listeners;
 
             public override SourceLevels AuthenticationTraceSourceLevel
             {
-                get { return AdalTrace.TraceSource.Switch.Level; }
-                set { AdalTrace.TraceSource.Switch.Level = value; }
+                get { return this.sourceLevels; }
+                set { this.sourceLevels = value; }
             }
 #else
             public AdalSession()

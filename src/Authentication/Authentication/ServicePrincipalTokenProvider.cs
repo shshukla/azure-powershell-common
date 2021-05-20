@@ -23,7 +23,8 @@ using System;
 using System.Collections.Generic;
 using System.Security;
 using Microsoft.Azure.Commands.Common.Authentication.Properties;
-
+using Microsoft.Azure.Commands.Common.Authentication.Utilities;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Azure.Commands.Common.Authentication
 {
@@ -106,8 +107,8 @@ namespace Microsoft.Azure.Commands.Common.Authentication
             StoreAppKey(appId, config.AdDomain, appKey);
             var context = GetContext(config);
 #if !NETSTANDARD
-            var credential = new ClientCredential(appId, appKey);
-            return context.AcquireToken(config.ResourceClientUri, credential);
+            var credential = new ClientCredential(appId, SecureStringToString(appKey));
+            return context.AcquireTokenAsync(config.ResourceClientUri, credential).Result;
 #else
             var credential = new ClientCredential(appId, ConversionUtilities.SecureStringToString(appKey));
             return context.AcquireTokenAsync(config.ResourceClientUri, credential).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -127,7 +128,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication
 
             var context = GetContext(config);
 #if !NETSTANDARD
-            return context.AcquireToken(config.ResourceClientUri, new ClientAssertionCertificate(appId, certificate));
+            return context.AcquireTokenAsync(config.ResourceClientUri, new ClientAssertionCertificate(appId, certificate), sendX5c: true).Result;
 #else
             return context.AcquireTokenAsync(config.ResourceClientUri, new Microsoft.IdentityModel.Clients.ActiveDirectory.ClientAssertionCertificate(appId, certificate))
                           .ConfigureAwait(false).GetAwaiter().GetResult();
@@ -241,6 +242,20 @@ namespace Microsoft.Azure.Commands.Common.Authentication
             }
 
             public DateTimeOffset ExpiresOn { get { return AuthResult.ExpiresOn; } }
+        }
+
+        private static string SecureStringToString(SecureString secureString)
+        {
+            IntPtr valuePtr = IntPtr.Zero;
+            try
+            {
+                valuePtr = Marshal.SecureStringToGlobalAllocUnicode(secureString);
+                return Marshal.PtrToStringUni(valuePtr);
+            }
+            finally
+            {
+                Marshal.ZeroFreeGlobalAllocUnicode(valuePtr);
+            }
         }
     }
 }

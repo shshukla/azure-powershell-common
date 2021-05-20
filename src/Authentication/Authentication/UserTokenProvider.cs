@@ -79,7 +79,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication
                 Resources.UPNRenewTokenTrace,
                 token.AuthResult.AccessTokenType,
                 token.AuthResult.ExpiresOn,
-                token.AuthResult.IsMultipleResourceRefreshToken,
+                false,
                 token.AuthResult.TenantId,
                 token.UserId);
 
@@ -112,10 +112,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication
 
         private AuthenticationContext CreateContext(AdalConfiguration config)
         {
-            return new AuthenticationContext(config.AdEndpoint + config.AdDomain, config.ValidateAuthority, config.TokenCache)
-            {
-                OwnerWindow = parentWindow
-            };
+            return new AuthenticationContext(config.AdEndpoint + config.AdDomain, config.ValidateAuthority, config.TokenCache);
         }
 
         // We have to run this in a separate thread to guarantee that it's STA. This method
@@ -218,7 +215,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication
             string userId,
             SecureString password)
         {
-            AuthenticationResult result;
+            AuthenticationResult result = null;
             var context = CreateContext(config);
 
             TracingAdapter.Information(
@@ -242,42 +239,42 @@ namespace Microsoft.Azure.Commands.Common.Authentication
                 Guid tempGuid = Guid.Empty;
                 if (!string.Equals(config.AdDomain, "Common", StringComparison.OrdinalIgnoreCase) && !Guid.TryParse(config.AdDomain, out tempGuid))
                 {
-                    var tempResult = context.AcquireToken(
-                            config.ResourceClientUri,
-                            config.ClientId,
-                            config.ClientRedirectUri,
-                            promptBehavior,
-                            UserIdentifier.AnyUser,
-                            AdalConfiguration.EnableEbdMagicCookie);
-                    config.AdDomain = tempResult.TenantId;
+                    //var tempResult = context.AcquireToken(
+                    //        config.ResourceClientUri,
+                    //        config.ClientId,
+                    //        config.ClientRedirectUri,
+                    //        promptBehavior,
+                    //        UserIdentifier.AnyUser,
+                    //        AdalConfiguration.EnableEbdMagicCookie);
+                    config.AdDomain = null;
                     context = CreateContext(config);
                     promptBehavior = PromptBehavior.Never;
                 }
 
-                result = context.AcquireToken(
-                    config.ResourceClientUri,
-                    config.ClientId,
-                    config.ClientRedirectUri,
-                    promptBehavior,
-                    UserIdentifier.AnyUser,
-                    AdalConfiguration.EnableEbdMagicCookie);
+                //result = context.AcquireToken(
+                //    config.ResourceClientUri,
+                //    config.ClientId,
+                //    config.ClientRedirectUri,
+                //    promptBehavior,
+                //    UserIdentifier.AnyUser,
+                //    AdalConfiguration.EnableEbdMagicCookie);
             }
             else
             {
                 if (password == null)
                 {
-                    result = context.AcquireToken(
-                        config.ResourceClientUri,
-                        config.ClientId,
-                        config.ClientRedirectUri,
-                        promptBehavior,
-                        new UserIdentifier(userId, UserIdentifierType.RequiredDisplayableId),
-                        AdalConfiguration.EnableEbdMagicCookie);
+                    //result = context.AcquireTokenAsync(
+                    //    config.ResourceClientUri,
+                    //    config.ClientId,
+                    //    config.ClientRedirectUri,
+                    //    promptBehavior,
+                    //    new UserIdentifier(userId, UserIdentifierType.RequiredDisplayableId),
+                    //    AdalConfiguration.EnableEbdMagicCookie).Result;
                 }
                 else
                 {
-                    UserCredential credential = new UserCredential(userId, password);
-                    result = context.AcquireToken(config.ResourceClientUri, config.ClientId, credential);
+                    //UserCredential credential = new UserCredential(userId, password);
+                    //result = context.AcquireTokenAsync(config.ResourceClientUri, config.ClientId, credential).Result;
                 }
             }
             return result;
