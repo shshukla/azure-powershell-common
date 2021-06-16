@@ -12,12 +12,12 @@
 // limitations under the License.
 // ----------------------------------------------------------------------------------
 using Hyak.Common;
-using Microsoft.Azure.Commands.Common.Authentication;
 using Microsoft.Azure.Commands.Common.Authentication.Abstractions;
 using Microsoft.Azure.Commands.Common.Authentication.Properties;
 using Microsoft.Azure.Commands.Common.Authentication.Utilities;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using System;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Authentication;
 using System.Threading;
@@ -246,38 +246,59 @@ namespace Microsoft.Azure.Commands.Common.Authentication
                     //        promptBehavior,
                     //        UserIdentifier.AnyUser,
                     //        AdalConfiguration.EnableEbdMagicCookie);
-                    config.AdDomain = null;
+                    var tempResult = context.AcquireTokenAsync(
+                            config.ResourceClientUri,
+                            config.ClientId,
+                            config.ClientRedirectUri,
+                            new PlatformParameters(promptBehavior),
+                            UserIdentifier.AnyUser,
+                            AdalConfiguration.EnableEbdMagicCookie).Result;
+                    config.AdDomain = tempResult.TenantId;
                     context = CreateContext(config);
                     promptBehavior = PromptBehavior.Never;
                 }
 
-                //result = context.AcquireToken(
-                //    config.ResourceClientUri,
-                //    config.ClientId,
-                //    config.ClientRedirectUri,
-                //    promptBehavior,
-                //    UserIdentifier.AnyUser,
-                //    AdalConfiguration.EnableEbdMagicCookie);
+                result = context.AcquireTokenAsync(
+                            config.ResourceClientUri,
+                            config.ClientId,
+                            config.ClientRedirectUri,
+                            new PlatformParameters(promptBehavior),
+                            UserIdentifier.AnyUser,
+                            AdalConfiguration.EnableEbdMagicCookie).Result;
             }
             else
             {
                 if (password == null)
                 {
-                    //result = context.AcquireTokenAsync(
-                    //    config.ResourceClientUri,
-                    //    config.ClientId,
-                    //    config.ClientRedirectUri,
-                    //    promptBehavior,
-                    //    new UserIdentifier(userId, UserIdentifierType.RequiredDisplayableId),
-                    //    AdalConfiguration.EnableEbdMagicCookie).Result;
+                    result = context.AcquireTokenAsync(
+                        config.ResourceClientUri,
+                        config.ClientId,
+                        config.ClientRedirectUri,
+                        new PlatformParameters(promptBehavior),
+                        new UserIdentifier(userId, UserIdentifierType.RequiredDisplayableId),
+                        AdalConfiguration.EnableEbdMagicCookie).Result;
                 }
                 else
                 {
-                    //UserCredential credential = new UserCredential(userId, password);
-                    //result = context.AcquireTokenAsync(config.ResourceClientUri, config.ClientId, credential).Result;
+                    ClientCredential credential = new ClientCredential(userId, SecureStringToString(password));
+                    result = context.AcquireTokenAsync(config.ResourceClientUri, credential).Result;
                 }
             }
             return result;
+        }
+
+        private static string SecureStringToString(SecureString secureString)
+        {
+            IntPtr valuePtr = IntPtr.Zero;
+            try
+            {
+                valuePtr = Marshal.SecureStringToGlobalAllocUnicode(secureString);
+                return Marshal.PtrToStringUni(valuePtr);
+            }
+            finally
+            {
+                Marshal.ZeroFreeGlobalAllocUnicode(valuePtr);
+            }
         }
 
         private string GetExceptionMessage(Exception ex)
