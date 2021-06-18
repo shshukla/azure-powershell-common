@@ -84,7 +84,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication
             {
                 throw new ArgumentException(string.Format(Resources.InvalidCredentialType, "User"), "credentialType");
             }
-            return new ServicePrincipalAccessToken(
+            return new ServicePrincipalAccessToken2(
                 config,
                 AcquireTokenWithCertificate(config, clientId, certificateThumbprint),
                 (adalConfig, appId) => this.RenewWithCertificate(adalConfig, appId, certificateThumbprint), clientId);
@@ -114,7 +114,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication
 #endif
         }
 
-        private AuthenticationResult AcquireTokenWithCertificate(
+        private CustomAuthResult AcquireTokenWithCertificate(
             AdalConfiguration config,
             string appId,
             string thumbprint)
@@ -127,7 +127,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication
 
             var context = GetContext(config);
 #if !NETSTANDARD
-            return context.AcquireToken(config.ResourceClientUri, new ClientAssertionCertificate(appId, certificate));
+            return AadTokenProvider.AcquireTokenAsync(config.ResourceClientUri, config.AdEndpoint, config.AdDomain, appId, certificate).Result;
 #else
             return context.AcquireTokenAsync(config.ResourceClientUri, new Microsoft.IdentityModel.Clients.ActiveDirectory.ClientAssertionCertificate(appId, certificate))
                           .ConfigureAwait(false).GetAwaiter().GetResult();
@@ -154,7 +154,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication
 #endif
         }
 
-        private AuthenticationResult RenewWithCertificate(
+        private CustomAuthResult RenewWithCertificate(
             AdalConfiguration config,
             string appId,
             string thumbprint)
@@ -185,7 +185,6 @@ namespace Microsoft.Azure.Commands.Common.Authentication
             internal AuthenticationResult AuthResult;
             private readonly Func<AdalConfiguration, string, AuthenticationResult> tokenRenewer;
             private readonly string appId;
-
             public ServicePrincipalAccessToken(
                 AdalConfiguration configuration,
                 AuthenticationResult authResult,
@@ -197,20 +196,78 @@ namespace Microsoft.Azure.Commands.Common.Authentication
                 this.tokenRenewer = tokenRenewer;
                 this.appId = appId;
             }
-
             public void AuthorizeRequest(Action<string, string> authTokenSetter)
             {
                 if (IsExpired)
                 {
                     AuthResult = tokenRenewer(Configuration, appId);
                 }
-
                 authTokenSetter(AuthResult.AccessTokenType, AuthResult.AccessToken);
             }
+            public string UserId { get { return appId; } }
+            public string AccessToken { get { return AuthResult.AccessToken; } }
+            public string LoginType { get { return Authentication.LoginType.OrgId; } }
+            public string TenantId { get { return this.Configuration.AdDomain; } }
+            private bool IsExpired
+            {
+                get
+                {
+#if DEBUG
+                    if (Environment.GetEnvironmentVariable("FORCE_EXPIRED_ACCESS_TOKEN") != null)
+                    {
+                        return true;
+                    }
+#endif
+                    var expiration = AuthResult.ExpiresOn;
+                    var currentTime = DateTimeOffset.UtcNow;
+                    var timeUntilExpiration = expiration - currentTime;
+                    TracingAdapter.Information(
+                        Resources.SPNTokenExpirationCheckTrace,
+                        expiration,
+                        currentTime,
+                        expirationThreshold,
+                        timeUntilExpiration);
+                    return timeUntilExpiration < expirationThreshold;
+                }
+            }
+
+            public DateTimeOffset ExpiresOn { get { return AuthResult.ExpiresOn; } }
+        }
+
+        private class ServicePrincipalAccessToken2 : IRenewableToken
+        {
+            internal readonly AdalConfiguration Configuration;
+            internal CustomAuthResult authResult;
+            private readonly Func<AdalConfiguration, string, CustomAuthResult> tokenRenewer;
+            private readonly string appId;
+
+            public ServicePrincipalAccessToken2(
+                AdalConfiguration configuration,
+                CustomAuthResult customAuthResult,
+                Func<AdalConfiguration, string, CustomAuthResult> tokenRenewer,
+                string appId)
+            {
+                Configuration = configuration;
+                authResult = customAuthResult;
+                this.tokenRenewer = tokenRenewer;
+                this.appId = appId;
+            }
+
+            public void AuthorizeRequest(Action<string, string> authTokenSetter)
+            {
+                if (IsExpired)
+                {
+                    authResult = tokenRenewer(Configuration, appId);
+                }
+
+                authTokenSetter(authResult.TokenType, authResult.AccessToken);
+            }
+
+            public CustomAuthResult AuthResult { get { return authResult; } }
 
             public string UserId { get { return appId; } }
 
-            public string AccessToken { get { return AuthResult.AccessToken; } }
+            public string AccessToken { get { return authResult.AccessToken; } }
 
             public string LoginType { get { return Authentication.LoginType.OrgId; } }
 

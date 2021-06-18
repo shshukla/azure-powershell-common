@@ -58,8 +58,10 @@
     <Compile Include="Authentication\AdalTokenProvider.cs" />
     <Compile Include="Authentication\CertificateApplicationCredentialProvider.cs" />
     <Compile Include="Authentication\ConsoleParentWindow.cs" />
+    <Compile Include="Authentication\CustomAuthResult.cs" />
     <Compile Include="Authentication\IdentityTokenHelpers.cs" />
     <Compile Include="Authentication\ITokenProvider.cs" />
+    <Compile Include="Authentication\AadTokenProvider.cs" />
     <Compile Include="Authentication\KeyStoreApplicationCredentialProvider.cs" />
     <Compile Include="Authentication\ManagedServiceAccessToken.cs" />
     <Compile Include="Authentication\ManagedServiceTokenInfo.cs" />
@@ -104,6 +106,11 @@
       <Project>{70527617-7598-4aef-b5bd-db9186b8184b}</Project>
       <Name>Authentication.Abstractions</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.IdentityModel">
+      <!--<HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.IdentityModel.dll</HintPath>-->
+    </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
