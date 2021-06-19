@@ -284,7 +284,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication
                     }
 #endif
 
-                    var expiration = AuthResult.ExpiresOn;
+                    var expiration = ExpiresOn;
                     var currentTime = DateTimeOffset.UtcNow;
                     var timeUntilExpiration = expiration - currentTime;
                     TracingAdapter.Information(
@@ -297,7 +297,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication
                 }
             }
 
-            public DateTimeOffset ExpiresOn { get { return AuthResult.ExpiresOn; } }
+            public DateTimeOffset ExpiresOn { get { return new DateTimeOffset(AuthResult.ExpiresOn); } }
         }
     }
 }

@@ -12,6 +12,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+    using Hyak.Common;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
 
@@ -22,7 +23,9 @@ namespace Microsoft.Azure.Commands.Common.Authentication
     {
         public static async Task<CustomAuthResult> AcquireTokenAsync(string resource, string adEndpoint, string tenantId, string clientId, X509Certificate2 certificate)
         {
+            adEndpoint = adEndpoint.TrimEnd('/');
             var tokenUri = new Uri($"{adEndpoint}/{tenantId}/oauth2/token");
+            TracingAdapter.Information(($"Resource:{resource}, Aad:{adEndpoint}, tenant:{tenantId}, audience:{tokenUri}, clientId:{clientId}, cert:{certificate.Thumbprint}");
             string clientAssertion = GetAadClientAssertion(clientId: clientId, audience: tokenUri.AbsoluteUri, certificate: certificate, expiration: TimeSpan.FromDays(1));
             //string clientAssertion = JsonEncryptionUtility.GetClientAssertionToken(clientId: clientId, audience: tokenUri.AbsoluteUri, certificate: certificate, expiration: TimeSpan.FromDays(1), sendX5C: true);
             var requestBody = new Dictionary<string, string>
@@ -45,7 +48,6 @@ namespace Microsoft.Azure.Commands.Common.Authentication
                         $"&client_assertion={clientAssertion}",
                         Encoding.UTF8,
                         "application/x-www-form-urlencoded");
-                Console.WriteLine(request.Content.ReadAsStringAsync().Result);
 
                 HttpClientWithRetry client = new HttpClientWithRetry();
                 var response = await client.SendAsync(request, CancellationToken.None);

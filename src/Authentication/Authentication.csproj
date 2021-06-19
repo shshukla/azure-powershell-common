@@ -110,6 +110,7 @@
   <ItemGroup>
     <Reference Include="System.IdentityModel">
       <!--<HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.2\System.IdentityModel.dll</HintPath>-->
+      <Private>True</Private>
     </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
