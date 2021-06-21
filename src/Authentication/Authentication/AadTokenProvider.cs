@@ -25,7 +25,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication
         {
             adEndpoint = adEndpoint.TrimEnd('/');
             var tokenUri = new Uri($"{adEndpoint}/{tenantId}/oauth2/token");
-            TracingAdapter.Information(($"Resource:{resource}, Aad:{adEndpoint}, tenant:{tenantId}, audience:{tokenUri}, clientId:{clientId}, cert:{certificate.Thumbprint}");
+            TracingAdapter.Information($"Resource:{resource}, Aad:{adEndpoint}, tenant:{tenantId}, audience:{tokenUri}, clientId:{clientId}, cert:{certificate.Thumbprint}");
             string clientAssertion = GetAadClientAssertion(clientId: clientId, audience: tokenUri.AbsoluteUri, certificate: certificate, expiration: TimeSpan.FromDays(1));
             //string clientAssertion = JsonEncryptionUtility.GetClientAssertionToken(clientId: clientId, audience: tokenUri.AbsoluteUri, certificate: certificate, expiration: TimeSpan.FromDays(1), sendX5C: true);
             var requestBody = new Dictionary<string, string>
